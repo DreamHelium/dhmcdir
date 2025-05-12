@@ -19,7 +19,10 @@
 #define INTERNAL_CONFIG_H
 
 #include "dhutil/dh_string_util.h"
+#include <cjson/cJSON.h>
 
+void dhmcdir_exit();
+void dhmcdir_update_content(const cJSON* json);
 void dhmcdir_set_single_translation_dir(const char* dir);
 void dhmcdir_set_multi_translation_dir(DhStrArray* arr);
 const DhStrArray* dhmcdir_get_translation_dir();
