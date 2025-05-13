@@ -18,6 +18,8 @@
 #ifndef PATH_H
 #define PATH_H
 
-char* dh_mcdir_get_translation_file(const char* gamedir, const char* version, const char* lang);
+char* dhmcdir_get_translation_file(const char* gamedir, const char* version, const char* lang);
+char* dhmcdir_get_object_hash(const char* gamedir, const char* version, const char* object);
+char* dhmcdir_get_object_dir(const char* gamedir, const char* version, const char* object);
 
 #endif /* PATH_H */

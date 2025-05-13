@@ -40,52 +40,76 @@ static char* get_large_version(const char* version)
     return g_strdup(version);
 }
 
-char* dh_mcdir_get_translation_file(const char* gamedir, const char* version, const char* lang)
+static char* get_pure_lang(const char* lang)
+{
+    char* lang_dup = lang? g_strdup(lang) : g_strdup("zh_cn");
+    for (int i = 0 ; i < strlen(lang_dup) ; i++)
+        {
+            lang_dup[i] = g_ascii_tolower(lang_dup[i]);
+        }
+    char* point_pos = NULL;
+    if ((point_pos = strchr(lang_dup, '.')) != NULL)
+        *point_pos = 0;
+    return lang_dup;
+}
+
+char* dhmcdir_get_translation_file(const char* gamedir, const char* version, const char* lang)
 {
     const DhStrArray* arr = dhmcdir_get_translation_dir();
-    for (int i = 0 ; i < arr->num ; i++)
+    for (int i = 0 ; arr && i < arr->num ; i++)
         if(dh_file_exist(arr->val[i])) return arr->val[i];
 
     /* Find translation file by version */
-    char* larger_version = get_large_version(version);
-    char* index_file = NULL;
-    if(gamedir && larger_version && dh_file_exist(gamedir))
-        index_file = g_strconcat(gamedir, G_DIR_SEPARATOR_S, "assets", G_DIR_SEPARATOR_S, "indexes", G_DIR_SEPARATOR_S, larger_version, ".json", NULL);
-    g_free(larger_version);
-    if(dh_file_exist(index_file))
-    {
-        cJSON* index = file_to_json(index_file);
-        g_free(index_file);
-        cJSON* objects = cJSON_GetObjectItem(index, "objects");
-        char* lang_dup = lang ? g_strdup(lang) : g_strdup("zh_cn");
-        for(int i = 0 ; i < strlen(lang_dup) ; i++)
-            lang_dup[i] = g_ascii_tolower(lang_dup[i]);
-        char* lang_dup_last_p = NULL;
-        if(strchr(lang_dup, '.'))
-            lang_dup_last_p = strrchr(lang_dup, '.');
-        if(lang_dup_last_p) *lang_dup_last_p = 0;
-        g_message("%s", lang_dup);
-        char* lang_dir = g_strconcat("minecraft/lang/", lang_dup, ".json", NULL);
-        cJSON* translation_file = cJSON_GetObjectItem(objects, lang_dir);
-        g_free(lang_dir);
-        g_free(lang_dup);
-        cJSON* hash = cJSON_GetObjectItem(translation_file, "hash");
-        char* hash_name = cJSON_GetStringValue(hash);
-        char hash_name_pre[3] = {};
-        char* transfile = NULL;
-        if(hash_name)
+    char* lang_dup = get_pure_lang(lang);
+    char* object = g_strconcat("minecraft/lang/", lang_dup, ".json", NULL);
+    char* ret = dhmcdir_get_object_dir (gamedir, version, object);
+    g_free(lang_dup);
+    g_free(object);
+    return ret;
+}
+
+char *
+dhmcdir_get_object_hash (const char *gamedir, const char *version,
+                         const char *object)
+{
+    char *larger_version = get_large_version (version);
+    char *index_file = NULL;
+    char *ret = NULL;
+    if (gamedir && larger_version && dh_file_exist (gamedir))
         {
-            hash_name_pre[0] = hash_name[0];
-            hash_name_pre[1] = hash_name[1];
-            hash_name_pre[2] = 0;
-            transfile = g_strconcat(gamedir, G_DIR_SEPARATOR_S, "assets", G_DIR_SEPARATOR_S, "objects", G_DIR_SEPARATOR_S, hash_name_pre, G_DIR_SEPARATOR_S, hash_name, NULL);
+            char *filename = g_strconcat (larger_version, ".json",
+                                          NULL); /* Like 1.18.json */
+            index_file = g_build_path (G_DIR_SEPARATOR_S, gamedir, "assets",
+                                       "indexes", filename, NULL);
+            g_free (filename);
         }
-        cJSON_Delete(index);
-        return transfile;
-    }
-    else
-    {
-        g_free(index_file);
-        return NULL;
-    }
+    g_free (larger_version);
+    if (dh_file_exist (index_file))
+        {
+            cJSON *index = file_to_json (index_file);
+            g_free (index_file);
+            cJSON *objects = cJSON_GetObjectItem (index, "objects");
+            cJSON *object_json = cJSON_GetObjectItem (objects, object);
+            char *hash = cJSON_GetStringValue (
+                cJSON_GetObjectItem (object_json, "hash"));
+            ret = g_strdup (hash);
+            cJSON_Delete (index);
+        }
+    return ret;
+}
+
+char *
+dhmcdir_get_object_dir (const char *gamedir, const char *version,
+                        const char *object)
+{
+    char* hash = dhmcdir_get_object_hash (gamedir, version, object);
+    if (gamedir && version && hash)
+        {
+            char hash_before[3] = { hash[0], hash[1], 0 };
+            char *dir = g_build_path (G_DIR_SEPARATOR_S, gamedir, "assets",
+                                      "objects", hash_before, hash, NULL);
+            g_free (hash);
+            return dir;
+        }
+    return NULL;
 }

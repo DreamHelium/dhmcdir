@@ -24,12 +24,14 @@ DhStrArray* translation_dir = NULL;
 void dhmcdir_set_single_translation_dir(const char* dir)
 {
     dh_str_array_free(translation_dir);
+    translation_dir = NULL;
     dh_str_array_add_str(&translation_dir, dir);
 }
 
 void dhmcdir_set_multi_translation_dir(DhStrArray* arr)
 {
     dh_str_array_free(translation_dir);
+    translation_dir = NULL;
     for (int i = 0 ; i < arr->num ; i++)
         dh_str_array_add_str(&translation_dir, arr->val[i]);
 }
